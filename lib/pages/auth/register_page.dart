@@ -40,9 +40,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pendaftaran berhasil, silakan login'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: const Text('Pendaftaran berhasil, silakan login'),
+          backgroundColor: Theme.of(context).colorScheme.tertiary,
         ),
       );
       Navigator.pop(context);
@@ -50,7 +50,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(auth.error ?? 'Pendaftaran gagal'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }

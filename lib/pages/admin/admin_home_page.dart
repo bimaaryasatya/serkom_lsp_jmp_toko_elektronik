@@ -60,17 +60,15 @@ class _AdminHomePageState extends State<AdminHomePage> {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          'Admin Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-        ),
+        title: const Text('Admin Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF2563EB)),
+            icon: Icon(Icons.refresh, color: cs.primary),
             onPressed: () {
               context.read<ProductProvider>().loadProducts();
               _loadData();
@@ -83,30 +81,35 @@ class _AdminHomePageState extends State<AdminHomePage> {
         child: Column(
           children: [
             UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  colors: isDark
+                      ? [const Color(0xFF1C2333), const Color(0xFF0D1117)]
+                      : [const Color(0xFF0F172A), const Color(0xFF1E293B)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Color(0xFF2563EB),
-                child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 30),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: cs.primary,
+                child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 28),
               ),
               accountName: Text(
                 context.watch<AuthProvider>().user?.name ?? 'Admin',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
               ),
-              accountEmail: const Text('Administrator Database MySQL'),
+              accountEmail: const Text(
+                'Administrator Toko',
+                style: TextStyle(color: Colors.white70),
+              ),
             ),
             ListTile(
-              leading: const Icon(Icons.dashboard_rounded, color: Color(0xFF2563EB)),
+              leading: Icon(Icons.dashboard_rounded, color: cs.primary),
               title: const Text('Dashboard'),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF2563EB)),
+              leading: Icon(Icons.inventory_2_outlined, color: cs.primary),
               title: const Text('Kelola Produk'),
               onTap: () {
                 Navigator.pop(context);
@@ -114,17 +117,25 @@ class _AdminHomePageState extends State<AdminHomePage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF2563EB)),
-              title: const Text('Kelola Pesanan Masuk'),
+              leading: Icon(Icons.shopping_bag_outlined, color: cs.primary),
+              title: const Text('Kelola Pesanan'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, AppRoutes.adminOrders);
               },
             ),
+            ListTile(
+              leading: Icon(Icons.assessment_outlined, color: cs.primary),
+              title: const Text('Laporan Penjualan'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.adminReport);
+              },
+            ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.storefront, color: Color(0xFF10B981)),
-              title: const Text('Tampilan Pembeli (Store)'),
+              leading: Icon(Icons.storefront, color: cs.tertiary),
+              title: Text('Tampilan Pembeli', style: TextStyle(color: cs.tertiary)),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushReplacementNamed(context, AppRoutes.userHome);
@@ -133,8 +144,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
             const Spacer(),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-              title: const Text('Keluar Akun', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+              leading: Icon(Icons.logout, color: cs.error),
+              title: Text('Keluar Akun', style: TextStyle(color: cs.error, fontWeight: FontWeight.bold)),
               onTap: () async {
                 await context.read<AuthProvider>().logout();
                 if (context.mounted) {
@@ -153,15 +164,15 @@ class _AdminHomePageState extends State<AdminHomePage> {
           children: [
             Text(
               'Halo, ${context.read<AuthProvider>().user?.name ?? 'Admin'} 👋',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
+                color: cs.onSurface,
               ),
             ),
-            const Text(
-              'Ringkasan statistik data toko elektronik dari MySQL',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            Text(
+              'Ringkasan statistik toko elektronik',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 20),
 
@@ -169,108 +180,94 @@ class _AdminHomePageState extends State<AdminHomePage> {
             Row(
               children: [
                 Expanded(
-                  child: _buildGradientStatCard(
-                    'Total Produk',
-                    '$_productCount',
-                    Icons.inventory_2_outlined,
-                    [const Color(0xFF2563EB), const Color(0xFF3B82F6)],
+                  child: _buildStatCard(
+                    context: context,
+                    label: 'Total Produk',
+                    value: '$_productCount',
+                    icon: Icons.inventory_2_outlined,
+                    gradient: [cs.primary, cs.primary.withValues(alpha: 0.75)],
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildGradientStatCard(
-                    'Total User',
-                    '$_userCount',
-                    Icons.people_outline,
-                    [const Color(0xFF10B981), const Color(0xFF059669)],
+                  child: _buildStatCard(
+                    context: context,
+                    label: 'Total User',
+                    value: '$_userCount',
+                    icon: Icons.people_outline,
+                    gradient: [cs.tertiary, cs.tertiary.withValues(alpha: 0.75)],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            _buildGradientStatCard(
-              'Total Pendapatan Terjual',
-              currencyFormat.format(_totalRevenue),
-              Icons.account_balance_wallet_outlined,
-              [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+            _buildStatCard(
+              context: context,
+              label: 'Total Pendapatan Selesai',
+              value: currencyFormat.format(_totalRevenue),
+              icon: Icons.account_balance_wallet_outlined,
+              gradient: [const Color(0xFFF59E0B), const Color(0xFFD97706)],
             ),
             const SizedBox(height: 24),
 
-            // Quick Menu Card
+            // Quick Menu
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cs.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: cs.outline),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(18, 18, 18, 8),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
                     child: Text(
                       'Menu Operasional Admin',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
+                        color: cs.onSurface,
                       ),
                     ),
                   ),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.add_box_outlined, color: Color(0xFF2563EB)),
-                    ),
-                    title: const Text('Kelola Produk Store', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Tambah, perbarui, atau hapus stok produk di MySQL'),
-                    trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                    onTap: () {
-                      Navigator.pushNamed(context, AppRoutes.adminProductManage);
-                    },
+                  _buildMenuTile(
+                    context: context,
+                    icon: Icons.add_box_outlined,
+                    iconColor: cs.primary,
+                    title: 'Kelola Produk Store',
+                    subtitle: 'Tambah, perbarui, atau hapus stok produk',
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.adminProductManage),
                   ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9333EA).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF9333EA)),
-                    ),
-                    title: const Text('Kelola Pesanan Masuk', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Konfirmasi pembayaran, ubah status diproses/dikirim/selesai'),
-                    trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                    onTap: () {
-                      Navigator.pushNamed(context, AppRoutes.adminOrders);
-                    },
+                  Divider(height: 1, color: cs.outline),
+                  _buildMenuTile(
+                    context: context,
+                    icon: Icons.shopping_bag_outlined,
+                    iconColor: isDark ? const Color(0xFFD8B4FE) : const Color(0xFF9333EA),
+                    title: 'Kelola Pesanan Masuk',
+                    subtitle: 'Konfirmasi, proses, dan update status pesanan',
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.adminOrders),
                   ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.refresh, color: Color(0xFF10B981)),
-                    ),
-                    title: const Text('Refresh Data MySQL', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Muat ulang data produk dan statistik terbaru'),
-                    trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  Divider(height: 1, color: cs.outline),
+                  _buildMenuTile(
+                    context: context,
+                    icon: Icons.assessment_outlined,
+                    iconColor: const Color(0xFF0284C7),
+                    title: 'Laporan Penjualan & Keuangan',
+                    subtitle: 'Lihat rekapitulasi omset dan rincian transaksi',
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.adminReport),
+                  ),
+                  Divider(height: 1, color: cs.outline),
+                  _buildMenuTile(
+                    context: context,
+                    icon: Icons.refresh,
+                    iconColor: cs.tertiary,
+                    title: 'Refresh Data',
+                    subtitle: 'Muat ulang statistik dan produk terbaru',
                     onTap: () {
                       _loadData();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Data berhasil diperbarui'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
+                        const SnackBar(content: Text('Data berhasil diperbarui')),
                       );
                     },
                   ),
@@ -284,24 +281,25 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
   }
 
-  Widget _buildGradientStatCard(
-    String title,
-    String value,
-    IconData icon,
-    List<Color> gradientColors,
-  ) {
+  Widget _buildStatCard({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required IconData icon,
+    required List<Color> gradient,
+  }) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: gradientColors,
+          colors: gradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.first.withValues(alpha: 0.25),
+            color: gradient.first.withValues(alpha: 0.25),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -313,28 +311,39 @@ class _AdminHomePageState extends State<AdminHomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Icon(icon, color: Colors.white, size: 24),
+              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+              Icon(icon, color: Colors.white, size: 22),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
+          const SizedBox(height: 10),
+          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
         ],
       ),
+    );
+  }
+
+  Widget _buildMenuTile({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: iconColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: iconColor),
+      ),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: cs.onSurface)),
+      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+      trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+      onTap: onTap,
     );
   }
 }

@@ -14,6 +14,8 @@ class TransactionRepository {
     String? address,
     required List<CartModel> cartItems,
     required List<ProductModel> products,
+    String paymentMethod = 'Transfer Bank',
+    String courier = 'JNE Regular',
   }) async {
     String invoice = 'INV-${DateTime.now().millisecondsSinceEpoch}-$userId';
     const String defaultStatus = 'Menunggu Konfirmasi';
@@ -52,6 +54,8 @@ class TransactionRepository {
           'address': address ?? '',
           'status': defaultStatus,
           'date': dateStr,
+          'paymentMethod': paymentMethod,
+          'courier': courier,
           'items': itemsPayload,
         }),
       );
@@ -68,6 +72,8 @@ class TransactionRepository {
           address: address,
           status: defaultStatus,
           date: dateStr,
+          paymentMethod: paymentMethod,
+          courier: courier,
         );
       }
     } catch (_) {}
@@ -80,6 +86,8 @@ class TransactionRepository {
       address: address,
       status: defaultStatus,
       date: dateStr,
+      paymentMethod: paymentMethod,
+      courier: courier,
     );
   }
 
@@ -134,6 +142,16 @@ class TransactionRepository {
         Uri.parse('${AppConstants.apiBaseUrl}/transactions/$id/status'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'status': status}),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> updateTrackingNumber(int id, String courier, String trackingNumber) async {
+    try {
+      await http.put(
+        Uri.parse('${AppConstants.apiBaseUrl}/transactions/$id/tracking'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'courier': courier, 'trackingNumber': trackingNumber}),
       );
     } catch (_) {}
   }

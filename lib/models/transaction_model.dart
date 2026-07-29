@@ -7,6 +7,9 @@ class TransactionModel {
   final String? address;
   final String status;
   final String date;
+  final String paymentMethod;
+  final String courier;
+  final String trackingNumber;
 
   TransactionModel({
     this.id,
@@ -17,6 +20,9 @@ class TransactionModel {
     this.address,
     required this.status,
     required this.date,
+    this.paymentMethod = 'Transfer Bank',
+    this.courier = 'JNE Regular',
+    this.trackingNumber = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +35,9 @@ class TransactionModel {
       "address": address,
       "status": status,
       "date": date,
+      "paymentMethod": paymentMethod,
+      "courier": courier,
+      "trackingNumber": trackingNumber,
     };
   }
 
@@ -41,7 +50,10 @@ class TransactionModel {
       shippingFee: map["shippingFee"] != null ? (map["shippingFee"] as num).toDouble() : 0.0,
       address: map["address"],
       status: map["status"] ?? 'Menunggu Konfirmasi',
-      date: map["date"],
+      date: map["date"] ?? '',
+      paymentMethod: map["paymentMethod"] ?? 'Transfer Bank',
+      courier: map["courier"] ?? 'JNE Regular',
+      trackingNumber: map["trackingNumber"] ?? '',
     );
   }
 }

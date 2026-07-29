@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../models/cart_model.dart';
 import '../models/product_model.dart';
+import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/wishlist_provider.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -14,19 +17,36 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = context.watch<AuthProvider>().user;
+    final cartProvider = context.watch<CartProvider>();
+    final wishlistProvider = context.watch<WishlistProvider>();
+
+    final isWishlisted = wishlistProvider.isProductWishlisted(product.id);
+
+    CartModel? cartItem;
+    try {
+      cartItem = cartProvider.cartItems.firstWhere((c) => c.productId == product.id);
+    } catch (_) {
+      cartItem = null;
+    }
+    final bool isInCart = cartItem != null && cartItem.quantity > 0;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : const Color(0xFF0F172A).withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
+        border: Border.all(color: cs.outline, width: 1),
       ),
       child: InkWell(
         onTap: onTap,
@@ -42,20 +62,20 @@ class ProductCard extends StatelessWidget {
                   child: Container(
                     height: 140,
                     width: double.infinity,
-                    color: const Color(0xFFF8FAFC),
+                    color: isDark ? const Color(0xFF1C2333) : const Color(0xFFF8FAFC),
                     child: CachedNetworkImage(
                       imageUrl: product.image,
                       fit: BoxFit.cover,
                       placeholder: (_, __) => const Center(
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      errorWidget: (_, __, ___) => const Center(
-                        child: Icon(Icons.devices, size: 40, color: Color(0xFF94A3B8)),
+                      errorWidget: (_, __, ___) => Center(
+                        child: Icon(Icons.devices, size: 40, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
                       ),
                     ),
                   ),
                 ),
-                // Category Chip Badge
+                // Category Badge
                 if (product.category.isNotEmpty)
                   Positioned(
                     top: 8,
@@ -63,7 +83,7 @@ class ProductCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.75),
+                        color: Colors.black.withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -73,6 +93,40 @@ class ProductCard extends StatelessWidget {
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Wishlist Heart Icon Button
+                if (user != null)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: InkWell(
+                      onTap: () {
+                        context.read<WishlistProvider>().toggleWishlist(user.id!, product);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              isWishlisted
+                                  ? '${product.name} dihapus dari wishlist'
+                                  : '${product.name} disimpan ke wishlist ❤️',
+                            ),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isWishlisted ? Icons.favorite : Icons.favorite_border,
+                          size: 16,
+                          color: isWishlisted ? Colors.redAccent : Colors.white,
                         ),
                       ),
                     ),
@@ -92,17 +146,17 @@ class ProductCard extends StatelessWidget {
                       children: [
                         Text(
                           product.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
-                            color: Color(0xFF1E293B),
+                            color: cs.onSurface,
                             height: 1.2,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        // Stock Indicator Badge
+                        // Stock Indicator
                         Row(
                           children: [
                             Container(
@@ -110,7 +164,7 @@ class ProductCard extends StatelessWidget {
                               height: 6,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: product.stock > 5 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                color: product.stock > 5 ? cs.tertiary : cs.error.withValues(alpha: 0.8),
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -119,7 +173,7 @@ class ProductCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
-                                color: product.stock > 5 ? const Color(0xFF059669) : const Color(0xFFD97706),
+                                color: product.stock > 5 ? cs.tertiary : cs.error,
                               ),
                             ),
                           ],
@@ -133,38 +187,104 @@ class ProductCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             currencyFormat.format(product.price),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              color: Color(0xFF2563EB),
+                              fontSize: 12,
+                              color: cs.primary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Quick Add Button
-                        InkWell(
-                          onTap: () {
-                            context.read<CartProvider>().addToCart(product.id, 1);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${product.name} dimasukkan ke keranjang'),
-                                duration: const Duration(seconds: 1),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
+                        const SizedBox(width: 4),
+                        if (isInCart)
+                          Container(
+                            height: 30,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB),
+                              color: cs.primaryContainer,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: cs.primary.withValues(alpha: 0.4)),
                             ),
-                            child: const Icon(Icons.add_shopping_cart, size: 16, color: Colors.white),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                InkWell(
+                                  onTap: () {
+                                    if (cartItem!.quantity > 1) {
+                                      context.read<CartProvider>().updateQuantity(cartItem.id ?? 0, cartItem.quantity - 1);
+                                    } else {
+                                      context.read<CartProvider>().removeFromCart(cartItem.id ?? 0);
+                                    }
+                                  },
+                                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    child: Icon(Icons.remove, size: 14, color: cs.primary),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Text(
+                                    '${cartItem.quantity}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                      color: cs.onPrimaryContainer,
+                                    ),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    if (cartItem!.quantity < product.stock) {
+                                      context.read<CartProvider>().updateQuantity(cartItem.id ?? 0, cartItem.quantity + 1);
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Stok produk tidak mencukupi'),
+                                          duration: Duration(seconds: 1),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    child: Icon(Icons.add, size: 14, color: cs.primary),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          InkWell(
+                            onTap: () {
+                              if (product.stock > 0) {
+                                context.read<CartProvider>().addToCart(product.id, 1);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${product.name} ditambahkan ke keranjang'),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Stok produk habis'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: product.stock > 0 ? cs.primary : cs.onSurface.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.add_shopping_cart, size: 16, color: Colors.white),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],

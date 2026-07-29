@@ -13,8 +13,11 @@ class ProductProvider extends ChangeNotifier {
   String? _error;
   String _searchQuery = '';
 
-  List<ProductModel> get products =>
-      _selectedCategory != null ? _filteredProducts : _products;
+  double? _minPrice;
+  double? _maxPrice;
+  String _sort = 'latest';
+
+  List<ProductModel> get products => _filteredProducts;
   List<String> get categories => _categories;
   String? get selectedCategory => _selectedCategory;
   bool get isLoading => _isLoading;
@@ -29,11 +32,11 @@ class ProductProvider extends ChangeNotifier {
       await _repository.syncProductsToLocal();
       _products = await _repository.getLocalProducts();
       _categories = _getUniqueCategories();
-      _applyFilter();
+      _applyFilterInternal();
     } catch (e) {
       _products = await _repository.getLocalProducts();
       _categories = _getUniqueCategories();
-      _applyFilter();
+      _applyFilterInternal();
     }
 
     _isLoading = false;
@@ -46,31 +49,51 @@ class ProductProvider extends ChangeNotifier {
 
   void filterByCategory(String? category) {
     _selectedCategory = category;
-    _applyFilter();
+    _applyFilterInternal();
     notifyListeners();
   }
 
   void searchProducts(String query) {
     _searchQuery = query.toLowerCase();
-    _applyFilter();
+    _applyFilterInternal();
     notifyListeners();
   }
 
-  void _applyFilter() {
+  void applyFilter({double? minPrice, double? maxPrice, String? sort}) {
+    _minPrice = minPrice;
+    _maxPrice = maxPrice;
+    if (sort != null) _sort = sort;
+    _applyFilterInternal();
+    notifyListeners();
+  }
+
+  void _applyFilterInternal() {
     var result = List<ProductModel>.from(_products);
 
     if (_selectedCategory != null) {
-      result = result
-          .where((p) => p.category == _selectedCategory)
-          .toList();
+      result = result.where((p) => p.category == _selectedCategory).toList();
     }
 
     if (_searchQuery.isNotEmpty) {
-      result = result
-          .where((p) =>
-              p.name.toLowerCase().contains(_searchQuery) ||
-              p.description.toLowerCase().contains(_searchQuery))
-          .toList();
+      result = result.where((p) =>
+          p.name.toLowerCase().contains(_searchQuery) ||
+          p.description.toLowerCase().contains(_searchQuery)).toList();
+    }
+
+    if (_minPrice != null) {
+      result = result.where((p) => p.price >= _minPrice!).toList();
+    }
+
+    if (_maxPrice != null) {
+      result = result.where((p) => p.price <= _maxPrice!).toList();
+    }
+
+    if (_sort == 'price_asc') {
+      result.sort((a, b) => a.price.compareTo(b.price));
+    } else if (_sort == 'price_desc') {
+      result.sort((a, b) => b.price.compareTo(a.price));
+    } else {
+      result.sort((a, b) => b.id.compareTo(a.id));
     }
 
     _filteredProducts = result;
@@ -87,7 +110,7 @@ class ProductProvider extends ChangeNotifier {
   Future<void> addProduct(ProductModel product) async {
     await _repository.addProduct(product);
     _products.add(product);
-    _applyFilter();
+    _applyFilterInternal();
     notifyListeners();
   }
 
@@ -97,14 +120,14 @@ class ProductProvider extends ChangeNotifier {
     if (index != -1) {
       _products[index] = product;
     }
-    _applyFilter();
+    _applyFilterInternal();
     notifyListeners();
   }
 
   Future<void> deleteProduct(int id) async {
     await _repository.deleteProduct(id);
     _products.removeWhere((p) => p.id == id);
-    _applyFilter();
+    _applyFilterInternal();
     notifyListeners();
   }
 }

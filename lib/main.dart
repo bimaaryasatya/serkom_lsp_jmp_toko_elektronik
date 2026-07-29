@@ -7,6 +7,7 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/wishlist_provider.dart';
 import 'pages/splash/splash_page.dart';
 import 'pages/auth/login_page.dart';
 import 'pages/auth/register_page.dart';
@@ -16,9 +17,11 @@ import 'pages/user/cart_page.dart';
 import 'pages/user/checkout_page.dart';
 import 'pages/user/profile_page.dart';
 import 'pages/user/order_history_page.dart';
+import 'pages/user/wishlist_page.dart';
 import 'pages/admin/admin_home_page.dart';
 import 'pages/admin/product_manage_page.dart';
 import 'pages/admin/admin_orders_page.dart';
+import 'pages/admin/admin_report_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +39,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => WishlistProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
@@ -68,12 +72,16 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(builder: (_) => const ProfilePage());
                 case AppRoutes.orderHistory:
                   return MaterialPageRoute(builder: (_) => const OrderHistoryPage());
+                case AppRoutes.wishlist:
+                  return MaterialPageRoute(builder: (_) => const WishlistPage());
                 case AppRoutes.adminHome:
                   return MaterialPageRoute(builder: (_) => const AdminHomePage());
                 case AppRoutes.adminProductManage:
                   return MaterialPageRoute(builder: (_) => const ProductManagePage());
                 case AppRoutes.adminOrders:
                   return MaterialPageRoute(builder: (_) => const AdminOrdersPage());
+                case AppRoutes.adminReport:
+                  return MaterialPageRoute(builder: (_) => const AdminReportPage());
                 default:
                   return MaterialPageRoute(builder: (_) => const SplashPage());
               }

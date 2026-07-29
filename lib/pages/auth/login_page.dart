@@ -44,9 +44,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(auth.error ?? 'Login gagal'),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -54,55 +52,53 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo Icon Container
+                  // Logo
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF0EA5E9)],
+                      gradient: LinearGradient(
+                        colors: [cs.primary, cs.secondary],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                          blurRadius: 20,
+                          color: cs.primary.withValues(alpha: 0.35),
+                          blurRadius: 24,
                           offset: const Offset(0, 10),
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.devices,
-                      size: 48,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.devices, size: 48, color: Colors.white),
                   ),
-                  const SizedBox(height: 20),
-                  const Text(
+                  const SizedBox(height: 24),
+                  Text(
                     'Toko Elektronik',
                     style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 28,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+                      color: cs.onSurface,
                       letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Silakan masuk ke akun kamu untuk melanjutkan',
-                    style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                  Text(
+                    'Silakan masuk untuk melanjutkan',
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 36),
@@ -113,15 +109,10 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       hintText: 'user@toko.com atau admin@toko.com',
-                      prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF2563EB)),
+                      prefixIcon: Icon(Icons.email_outlined),
                     ),
                     keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Email tidak boleh kosong';
-                      }
-                      return null;
-                    },
+                    validator: (v) => (v == null || v.isEmpty) ? 'Email tidak boleh kosong' : null,
                   ),
                   const SizedBox(height: 16),
 
@@ -130,26 +121,17 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _passwordController,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF2563EB)),
+                      prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: const Color(0xFF64748B),
+                          color: cs.onSurfaceVariant,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
                     ),
                     obscureText: _obscurePassword,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password tidak boleh kosong';
-                      }
-                      return null;
-                    },
+                    validator: (v) => (v == null || v.isEmpty) ? 'Password tidak boleh kosong' : null,
                   ),
                   const SizedBox(height: 28),
 
@@ -161,22 +143,12 @@ class _LoginPageState extends State<LoginPage> {
                         height: 52,
                         child: ElevatedButton(
                           onPressed: auth.isLoading ? null : _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
                           child: auth.isLoading
                               ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
+                                  height: 22, width: 22,
                                   child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                                 )
-                              : const Text(
-                                  'Masuk ke Akun',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
+                              : const Text('Masuk ke Akun', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       );
                     },
@@ -186,23 +158,49 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Belum punya akun? ',
-                        style: TextStyle(color: Color(0xFF64748B)),
-                      ),
+                      Text('Belum punya akun? ', style: TextStyle(color: cs.onSurfaceVariant)),
                       GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, AppRoutes.register);
-                        },
-                        child: const Text(
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.register),
+                        child: Text(
                           'Daftar Sekarang',
-                          style: TextStyle(
-                            color: Color(0xFF2563EB),
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Hint Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1C2333) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: cs.outline),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '💡 Akun Demo',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Admin: admin@toko.com / admin123\nUser: Daftar akun baru atau cek DB',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
