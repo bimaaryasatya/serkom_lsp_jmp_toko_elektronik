@@ -1,12 +1,12 @@
-import '../database/database_helper.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../core/constants/constants.dart';
 import '../models/cart_model.dart';
 import '../models/product_model.dart';
 import '../models/transaction_item_model.dart';
 import '../models/transaction_model.dart';
 
 class TransactionRepository {
-  final DatabaseHelper _db = DatabaseHelper();
-
   Future<TransactionModel> createTransaction({
     required int userId,
     required double total,
@@ -17,56 +17,124 @@ class TransactionRepository {
   }) async {
     String invoice = 'INV-${DateTime.now().millisecondsSinceEpoch}-$userId';
     const String defaultStatus = 'Menunggu Konfirmasi';
+    String dateStr = DateTime.now().toIso8601String();
 
-    var transaction = TransactionModel(
-      invoice: invoice,
-      userId: userId,
-      total: total,
-      shippingFee: shippingFee,
-      address: address,
-      status: defaultStatus,
-      date: DateTime.now().toIso8601String(),
-    );
-
-    int transactionId = await _db.insertTransaction(transaction);
-
+    List<Map<String, dynamic>> itemsPayload = [];
     for (var cartItem in cartItems) {
-      var product = products.firstWhere((p) => p.id == cartItem.productId);
-      await _db.insertTransactionItem(TransactionItemModel(
-        transactionId: transactionId,
-        productId: cartItem.productId,
-        quantity: cartItem.quantity,
-        price: product.price,
-      ));
+      var product = products.firstWhere(
+        (p) => p.id == cartItem.productId,
+        orElse: () => ProductModel(
+          id: cartItem.productId,
+          name: '',
+          description: '',
+          price: 0.0,
+          stock: 0,
+          image: '',
+          category: '',
+        ),
+      );
+      itemsPayload.add({
+        'productId': cartItem.productId,
+        'quantity': cartItem.quantity,
+        'price': product.price,
+      });
     }
 
-    await _db.clearCart();
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.apiBaseUrl}/transactions'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'invoice': invoice,
+          'userId': userId,
+          'total': total,
+          'shippingFee': shippingFee,
+          'address': address ?? '',
+          'status': defaultStatus,
+          'date': dateStr,
+          'items': itemsPayload,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        int transactionId = data['id'] ?? 0;
+        return TransactionModel(
+          id: transactionId,
+          invoice: invoice,
+          userId: userId,
+          total: total,
+          shippingFee: shippingFee,
+          address: address,
+          status: defaultStatus,
+          date: dateStr,
+        );
+      }
+    } catch (_) {}
 
     return TransactionModel(
-      id: transactionId,
       invoice: invoice,
       userId: userId,
       total: total,
       shippingFee: shippingFee,
       address: address,
       status: defaultStatus,
-      date: DateTime.now().toIso8601String(),
+      date: dateStr,
     );
   }
 
   Future<List<TransactionModel>> getTransactionsByUser(int userId) async {
-    return await _db.getTransactionsByUser(userId);
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/transactions/user/$userId'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> list = json.decode(response.body);
+        return list.map((e) => TransactionModel.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<TransactionModel>> getAllTransactions() async {
-    return await _db.getAllTransactions();
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/transactions'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> list = json.decode(response.body);
+        return list.map((e) => TransactionModel.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<TransactionItemModel>> getTransactionItems(int transactionId) async {
-    return await _db.getTransactionItems(transactionId);
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/transactions/$transactionId/items'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> list = json.decode(response.body);
+        return list.map((e) => TransactionItemModel.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<void> updateTransactionStatus(int id, String status) async {
-    await _db.updateTransactionStatus(id, status);
+    try {
+      await http.put(
+        Uri.parse('${AppConstants.apiBaseUrl}/transactions/$id/status'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'status': status}),
+      );
+    } catch (_) {}
   }
 }

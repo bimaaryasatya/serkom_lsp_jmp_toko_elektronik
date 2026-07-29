@@ -1,86 +1,151 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/constants.dart';
-import '../database/database_helper.dart';
 import '../models/product_model.dart';
 
 class ProductRepository {
-  final DatabaseHelper _db = DatabaseHelper();
-
   Future<List<ProductModel>> fetchProductsFromApi() async {
-    final response = await http.get(
-      Uri.parse('${AppConstants.dummyJsonBaseUrl}${AppConstants.productsEndpoint}?limit=${AppConstants.productsLimit}'),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.dummyJsonBaseUrl}${AppConstants.productsEndpoint}?limit=${AppConstants.productsLimit}'),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final List<dynamic> productsJson = data['products'];
-      return productsJson.map((json) => ProductModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load products from API');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> productsJson = data['products'];
+        return productsJson.map((json) => ProductModel.fromJson(json)).toList();
+      } else {
+        throw Exception('Gagal memuat produk dari API eksternal');
+      }
+    } catch (e) {
+      return getLocalProducts();
     }
   }
 
   Future<List<ProductModel>> searchProductsFromApi(String query) async {
-    final response = await http.get(
-      Uri.parse('${AppConstants.dummyJsonBaseUrl}${AppConstants.productsSearchEndpoint}?q=$query'),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/products?search=${Uri.encodeComponent(query)}'),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final List<dynamic> productsJson = data['products'];
-      return productsJson.map((json) => ProductModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to search products');
+      if (response.statusCode == 200) {
+        final List<dynamic> list = json.decode(response.body);
+        return list.map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 
   Future<void> syncProductsToLocal() async {
     try {
-      int count = await _db.getProductCount();
-      if (count > 0) return; // Jika MySQL sudah ada data produk dari impor schema.sql, lewati
+      final countRes = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/products/count'));
+      if (countRes.statusCode == 200) {
+        final data = json.decode(countRes.body);
+        if ((data['count'] ?? 0) > 0) return; // Jika sudah ada data produk di MySQL, skip
+      }
+
       final products = await fetchProductsFromApi();
       for (var product in products) {
-        await _db.insertProduct(product);
+        await addProduct(product);
       }
     } catch (e) {
-      rethrow;
+      // Abaikan error sync agar tidak crash
     }
   }
 
   Future<List<ProductModel>> getLocalProducts() async {
-    return await _db.getProducts();
+    try {
+      final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/products'));
+      if (response.statusCode == 200) {
+        final List<dynamic> list = json.decode(response.body);
+        return list.map((e) {
+          final map = Map<String, dynamic>.from(e);
+          if (map['price'] != null) map['price'] = (map['price'] as num).toDouble();
+          if (map['stock'] != null) map['stock'] = (map['stock'] as num).toInt();
+          return ProductModel.fromMap(map);
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<ProductModel?> getProductById(int id) async {
-    return await _db.getProductById(id);
+    try {
+      final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/products/$id'));
+      if (response.statusCode == 200) {
+        final map = Map<String, dynamic>.from(json.decode(response.body));
+        if (map['price'] != null) map['price'] = (map['price'] as num).toDouble();
+        if (map['stock'] != null) map['stock'] = (map['stock'] as num).toInt();
+        return ProductModel.fromMap(map);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<ProductModel>> getProductsByCategory(String category) async {
-    final products = await _db.getProducts();
-    return products.where((p) => p.category == category).toList();
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/products?category=${Uri.encodeComponent(category)}'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> list = json.decode(response.body);
+        return list.map((e) {
+          final map = Map<String, dynamic>.from(e);
+          if (map['price'] != null) map['price'] = (map['price'] as num).toDouble();
+          if (map['stock'] != null) map['stock'] = (map['stock'] as num).toInt();
+          return ProductModel.fromMap(map);
+        }).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<String>> getCategories() async {
-    final response = await http.get(
-      Uri.parse('${AppConstants.dummyJsonBaseUrl}${AppConstants.productsEndpoint}/categories'),
-    );
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e['slug'] as String).toList();
+    try {
+      final products = await getLocalProducts();
+      final categories = products.map((p) => p.category).toSet().toList();
+      if (categories.isNotEmpty) return categories;
+
+      final response = await http.get(
+        Uri.parse('${AppConstants.dummyJsonBaseUrl}${AppConstants.productsEndpoint}/categories'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e['slug'] as String).toList();
+      }
+      return [];
+    } catch (_) {
+      return ['laptops', 'smartphones', 'audio', 'tv'];
     }
-    return [];
   }
 
   Future<void> addProduct(ProductModel product) async {
-    await _db.insertProduct(product);
+    await http.post(
+      Uri.parse('${AppConstants.apiBaseUrl}/products'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(product.toMap()),
+    );
   }
 
   Future<void> updateProduct(ProductModel product) async {
-    await _db.updateProduct(product);
+    await http.put(
+      Uri.parse('${AppConstants.apiBaseUrl}/products/${product.id}'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(product.toMap()),
+    );
   }
 
   Future<void> deleteProduct(int id) async {
-    await _db.deleteProduct(id);
+    await http.delete(
+      Uri.parse('${AppConstants.apiBaseUrl}/products/$id'),
+    );
   }
 }

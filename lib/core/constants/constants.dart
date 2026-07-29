@@ -7,10 +7,10 @@ class AppConstants {
   static String get apiBaseUrl {
     if (!kIsWeb && Platform.isAndroid) {
       // Android emulator menggunakan alamat 10.0.2.2 untuk menembak localhost PC
-      return 'http://10.0.2.2/toko_elektronik_api';
+      return 'http://10.0.2.2:5000/api';
     }
     // Web Chrome atau Windows Desktop langsung menggunakan localhost
-    return 'http://localhost/toko_elektronik_api';
+    return 'http://localhost:5000/api';
   }
 
   static const String dummyJsonBaseUrl = 'https://dummyjson.com';

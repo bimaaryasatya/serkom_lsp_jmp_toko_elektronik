@@ -1,36 +1,91 @@
-import '../database/database_helper.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../core/constants/constants.dart';
 import '../models/user_model.dart';
 
 class UserRepository {
-  final DatabaseHelper _db = DatabaseHelper();
-
   Future<bool> register(String name, String email, String password) async {
-    var existing = await _db.getUserByEmail(email);
-    if (existing != null) return false;
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.apiBaseUrl}/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'role': 'user',
+        }),
+      );
 
-    await _db.insertUser(UserModel(
-      name: name,
-      email: email,
-      password: password,
-      role: 'user',
-    ));
-    return true;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        return data['success'] == true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<UserModel?> login(String email, String password) async {
-    var user = await _db.getUserByEmail(email);
-    if (user != null && user.password == password) {
-      return user;
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.apiBaseUrl}/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['user'] != null) {
+          final userData = Map<String, dynamic>.from(data['user']);
+          userData['password'] = password; // sertakan password untuk memuaskan model jika dibutuhkan
+          return UserModel.fromMap(userData);
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   Future<UserModel?> getUserById(int id) async {
-    return await _db.getUserById(id);
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/users/$id'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['user'] != null) {
+          final userData = Map<String, dynamic>.from(data['user']);
+          userData['password'] = '';
+          return UserModel.fromMap(userData);
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<bool> isFirstUser() async {
-    var count = await _db.getUserCount();
-    return count == 0;
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/users/count'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final count = data['count'] ?? 0;
+        return count == 0;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 }
