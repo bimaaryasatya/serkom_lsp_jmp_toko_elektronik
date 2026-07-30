@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../database/sqlite_helper.dart';
 import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
 
 class AuthProvider extends ChangeNotifier {
   final UserRepository _userRepository = UserRepository();
+  final SqliteHelper _sqliteHelper = SqliteHelper();
 
   UserModel? _user;
   bool _isLoading = false;
@@ -18,11 +20,31 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> checkLoginStatus() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      int? userId = prefs.getInt('userId');
-      if (userId != null) {
-        _user = await _userRepository.getUserById(userId);
+      // 1. Coba muat sesi user dari SQLite lokal dulu (mendukung mode offline)
+      UserModel? cachedUser = await _sqliteHelper.getCachedUser();
+      if (cachedUser != null) {
+        _user = cachedUser;
         notifyListeners();
+      }
+
+      // 2. Verifikasi/perbarui dari server/MySQL jika online
+      final prefs = await SharedPreferences.getInstance();
+      int? userId = prefs.getInt('userId') ?? cachedUser?.id;
+      if (userId != null) {
+        try {
+          var remoteUser = await _userRepository.getUserById(userId);
+          if (remoteUser != null) {
+            _user = remoteUser;
+            await _sqliteHelper.saveSession(
+              userId: remoteUser.id!,
+              token: 'token_${remoteUser.id}_${DateTime.now().millisecondsSinceEpoch}',
+              name: remoteUser.name,
+              email: remoteUser.email,
+              role: remoteUser.role,
+            );
+            notifyListeners();
+          }
+        } catch (_) {}
       }
     } catch (e) {
       // silent fail on startup
@@ -38,6 +60,16 @@ class AuthProvider extends ChangeNotifier {
       var user = await _userRepository.login(email, password);
       if (user != null) {
         _user = user;
+
+        // Simpan sesi dan token login ke SQLite lokal
+        await _sqliteHelper.saveSession(
+          userId: user.id!,
+          token: 'token_${user.id}_${DateTime.now().millisecondsSinceEpoch}',
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        );
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('userId', user.id!);
         _isLoading = false;
@@ -96,6 +128,15 @@ class AuthProvider extends ChangeNotifier {
         var user = await _userRepository.login(email, password);
         if (user != null) {
           _user = user;
+
+          await _sqliteHelper.saveSession(
+            userId: user.id!,
+            token: 'token_${user.id}_${DateTime.now().millisecondsSinceEpoch}',
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          );
+
           final prefs = await SharedPreferences.getInstance();
           await prefs.setInt('userId', user.id!);
           _isLoading = false;
@@ -118,8 +159,10 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     _user = null;
+    await _sqliteHelper.clearSession();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('userId');
     notifyListeners();
   }
 }
+

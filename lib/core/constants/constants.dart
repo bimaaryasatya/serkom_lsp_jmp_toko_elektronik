@@ -2,7 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppConstants {
-  static const String appName = 'Toko Elektronik';
+  static const String appName = 'Tiptronic';
 
   static String get apiBaseUrl {
     if (!kIsWeb && Platform.isAndroid) {

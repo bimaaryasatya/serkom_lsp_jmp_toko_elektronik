@@ -274,7 +274,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       const SizedBox(height: 10),
                       RadioListTile<String>(
                         title: const Text('Transfer Bank BCA / Mandiri'),
-                        subtitle: const Text('1234567890 a.n. Toko Elektronik'),
+                        subtitle: const Text('1234567890 a.n. Tiptronic Electronics'),
                         value: 'Transfer Bank BCA / Mandiri',
                         groupValue: _selectedPayment,
                         onChanged: (val) => setState(() => _selectedPayment = val!),

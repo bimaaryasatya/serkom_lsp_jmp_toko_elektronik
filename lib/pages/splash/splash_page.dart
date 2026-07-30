@@ -51,7 +51,7 @@ class _SplashPageState extends State<SplashPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Toko Elektronik',
+              'Tiptronic',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,

@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/constants.dart';
+import '../database/sqlite_helper.dart';
 import '../models/product_model.dart';
 
 class ProductRepository {
+  final SqliteHelper _sqliteHelper = SqliteHelper();
+
   Future<List<ProductModel>> fetchProductsFromApi() async {
     try {
       final response = await http.get(
@@ -13,7 +16,9 @@ class ProductRepository {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> productsJson = data['products'];
-        return productsJson.map((json) => ProductModel.fromJson(json)).toList();
+        final products = productsJson.map((json) => ProductModel.fromJson(json)).toList();
+        await _sqliteHelper.cacheProducts(products);
+        return products;
       } else {
         throw Exception('Gagal memuat produk dari API eksternal');
       }
@@ -30,11 +35,16 @@ class ProductRepository {
 
       if (response.statusCode == 200) {
         final List<dynamic> list = json.decode(response.body);
-        return list.map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e))).toList();
+        final products = list.map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e))).toList();
+        if (products.isNotEmpty) {
+          await _sqliteHelper.cacheProducts(products);
+        }
+        return products;
       }
-      return [];
+      return await _sqliteHelper.searchCachedProducts(query);
     } catch (_) {
-      return [];
+      // Fallback ke pencarian SQLite lokal saat offline
+      return await _sqliteHelper.searchCachedProducts(query);
     }
   }
 
@@ -60,16 +70,25 @@ class ProductRepository {
       final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/products'));
       if (response.statusCode == 200) {
         final List<dynamic> list = json.decode(response.body);
-        return list.map((e) {
+        final products = list.map((e) {
           final map = Map<String, dynamic>.from(e);
           if (map['price'] != null) map['price'] = (map['price'] as num).toDouble();
           if (map['stock'] != null) map['stock'] = (map['stock'] as num).toInt();
           return ProductModel.fromMap(map);
         }).toList();
+
+        // Simpan ke cache SQLite lokal
+        if (products.isNotEmpty) {
+          await _sqliteHelper.cacheProducts(products);
+        }
+        return products;
       }
-      return [];
+
+      // Jika response bukan 200, ambil dari cache SQLite
+      return await _sqliteHelper.getCachedProducts();
     } catch (e) {
-      return [];
+      // Jika terjadi kesalahan koneksi/offline, ambil dari cache SQLite
+      return await _sqliteHelper.getCachedProducts();
     }
   }
 
@@ -80,9 +99,16 @@ class ProductRepository {
         final map = Map<String, dynamic>.from(json.decode(response.body));
         if (map['price'] != null) map['price'] = (map['price'] as num).toDouble();
         if (map['stock'] != null) map['stock'] = (map['stock'] as num).toInt();
-        return ProductModel.fromMap(map);
+        final product = ProductModel.fromMap(map);
+        await _sqliteHelper.cacheProducts([product]);
+        return product;
       }
-      return null;
+    } catch (_) {}
+
+    // Fallback ke cache SQLite
+    final cached = await _sqliteHelper.getCachedProducts();
+    try {
+      return cached.firstWhere((p) => p.id == id);
     } catch (_) {
       return null;
     }
@@ -95,18 +121,24 @@ class ProductRepository {
       );
       if (response.statusCode == 200) {
         final List<dynamic> list = json.decode(response.body);
-        return list.map((e) {
+        final products = list.map((e) {
           final map = Map<String, dynamic>.from(e);
           if (map['price'] != null) map['price'] = (map['price'] as num).toDouble();
           if (map['stock'] != null) map['stock'] = (map['stock'] as num).toInt();
           return ProductModel.fromMap(map);
         }).toList();
+
+        if (products.isNotEmpty) {
+          await _sqliteHelper.cacheProducts(products);
+        }
+        return products;
       }
-      return [];
+      return await _sqliteHelper.getCachedProductsByCategory(category);
     } catch (_) {
-      return [];
+      return await _sqliteHelper.getCachedProductsByCategory(category);
     }
   }
+
 
   Future<List<String>> getCategories() async {
     try {

@@ -215,7 +215,7 @@ class _UserHomePageState extends State<UserHomePage> {
             ),
             const SizedBox(width: 10),
             Text(
-              'Toko Elektronik',
+              'Tiptronic',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: cs.onSurface),
             ),
           ],
