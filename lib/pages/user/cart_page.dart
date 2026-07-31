@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../widgets/product_image.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -85,22 +85,12 @@ class _CartPageState extends State<CartPage> {
                       child: Row(
                         children: [
                           // Product Image
-                          ClipRRect(
+                          ProductImage(
+                            imageUrl: product.image,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
                             borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              width: 80,
-                              height: 80,
-                              color: isDark ? const Color(0xFF1C2333) : const Color(0xFFF8FAFC),
-                              child: CachedNetworkImage(
-                                imageUrl: product.image,
-                                fit: BoxFit.cover,
-                                placeholder: (_, __) => Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
-                                ),
-                                errorWidget: (_, __, ___) =>
-                                    Icon(Icons.image_not_supported, color: cs.onSurfaceVariant),
-                              ),
-                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(

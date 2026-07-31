@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/cart_model.dart';
@@ -7,6 +6,7 @@ import '../models/product_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/wishlist_provider.dart';
+import 'product_image.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -57,23 +57,12 @@ class ProductCard extends StatelessWidget {
             // Image Stack
             Stack(
               children: [
-                ClipRRect(
+                ProductImage(
+                  imageUrl: product.image,
+                  height: 125,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                  child: Container(
-                    height: 125,
-                    width: double.infinity,
-                    color: isDark ? const Color(0xFF1C2333) : const Color(0xFFF8FAFC),
-                    child: CachedNetworkImage(
-                      imageUrl: product.image,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      errorWidget: (_, __, ___) => Center(
-                        child: Icon(Icons.devices, size: 40, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
-                      ),
-                    ),
-                  ),
                 ),
                 // Category Badge
                 if (product.category.isNotEmpty)

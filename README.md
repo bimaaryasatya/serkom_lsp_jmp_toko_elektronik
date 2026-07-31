@@ -1,15 +1,15 @@
 # Documentation & Knowledge Base: Tiptronic E-Commerce System
-**Sistem Aplikasi Toko Elektronik Full-Stack (Flutter Mobile & Flask REST API MySQL)**
+**Sistem Aplikasi Toko Elektronik Full-Stack (Flutter Mobile & Flask REST API SQLite)**
 
 ---
 
 ## 1. Ikhtisar Sistem (System Overview)
 
-**Tiptronic** adalah sistem e-commerce toko elektronik end-to-end yang mengintegrasikan aplikasi mobile lintas platform berbasis **Flutter** (Android/iOS) dengan backend RESTful API berbasis **Python Flask** dan basis data **MySQL**. Sistem ini dirancang untuk menangani seluruh siklus transaksi e-commerce, mulai dari manajemen katalog produk, autentikasi multi-peran (Admin & Pelanggan), keranjang belanja, wishlist, kalkulasi ongkos kirim berbasis lokasi GPS & peta interaktif, transaksi pembayaran, hingga manajemen pengiriman resi dan laporan penjualan admin.
+**Tiptronic** adalah sistem e-commerce toko elektronik end-to-end yang mengintegrasikan aplikasi mobile lintas platform berbasis **Flutter** (Android/iOS) dengan backend RESTful API berbasis **Python Flask** dan basis data **SQLite**. Sistem ini dirancang untuk menangani seluruh siklus transaksi e-commerce, mulai dari manajemen katalog produk, autentikasi multi-peran (Admin & Pelanggan), keranjang belanja, wishlist, kalkulasi ongkos kirim berbasis lokasi GPS & peta interaktif, transaksi pembayaran, hingga manajemen pengiriman resi dan laporan penjualan admin.
 
 ### Key Highlights
 - **Multi-Role System**: Memisahkan antarmuka & hak akses antara **Pelanggan (User)** dan **Manajer Toko (Admin)**.
-- **Dual-Database & Offline Capability**: Mendukung sinkronisasi data online melalui Flask REST API ke MySQL dan *fallback storage* lokal menggunakan SQLite di sisi Flutter.
+- **Single-Database Simplicity**: Seluruh data disimpan dalam satu basis data **SQLite** (`toko_elektronik.db`) yang dikelola server Flask, sekaligus *fallback storage* lokal menggunakan SQLite di sisi Flutter.
 - **Advanced Filtering & Sorting**: Fitur pencarian kata kunci, filter kategori, rentang harga min-max, dan pengurutan harga/terbaru.
 - **Location-Based Shipping**: Kalkulasi estimasi ongkos kirim otomatis berdasarkan koordinat GPS perangkat (*Geolocator*) dan pemilih peta lokasi interaktif (*Map Picker*).
 - **Responsive & Modern UI**: Desain antarmuka berstandar e-commerce modern dengan *Dark Mode*, *Micro-animations*, *Badge Status*, serta tata letak responsif bebas overflow.
@@ -29,16 +29,14 @@ graph TD
 
     subgraph Backend [Python Flask Server]
         API[Flask REST API Endpoints]
-        PORS[PyMySQL Database Driver]
-        MYSQL[(MySQL Database)]
+        DB[(SQLite Database)]
     end
 
     UI --> PROV
     PROV --> REPO
     REPO -->|HTTP / JSON REST API| API
     REPO -.->|Offline Fallback| SQLITE
-    API --> PORS
-    PORS --> MYSQL
+    API --> DB
 ```
 
 ### Tech Stack Matrix
@@ -48,15 +46,15 @@ graph TD
 | **State Management** | Provider | Mengelola state aplikasi secara terpusat & reaktif |
 | **Local Database** | SQLite (`sqflite`) | Penyimpanan lokal untuk keranjang & cache produk offline |
 | **Backend Server** | Python 3.x, Flask, Flask-CORS | Server REST API modular & ringan |
-| **Database Remote** | MySQL (Database Name: `toko_elektronik_db`) | Database relational terpusat |
+| **Database Server** | SQLite (File: `toko_elektronik.db`) | Basis data file tanpa instalasi server terpisah |
 | **Integrasi Lokasi** | Geolocator & Flutter Map / Geocoding | Deteksi koordinat lokasi GPS real-time & kalkulasi jarak |
 | **Image Caching** | `cached_network_image` | Optimasi pemuatan gambar produk & banner promo |
 
 ---
 
-## 3. Skema Basis Data MySQL (Database Schema)
+## 3. Skema Basis Data SQLite (Database Schema)
 
-Basis data MySQL yang digunakan bernama `toko_elektronik_db`. Berikut adalah tabel-tabel utama beserta struktur kolom dan relasinya:
+Basis data SQLite yang digunakan berupa file `toko_elektronik.db`. Berikut adalah tabel-tabel utama beserta struktur kolom dan relasinya:
 
 ### 1. Tabel `users`
 Menyimpan data akun pengguna (Admin dan Pelanggan).
@@ -268,16 +266,15 @@ aplikasi_toko_elektronik/
 ## 7. Panduan Instalasi & Cara Pengoperasian
 
 ### Prasyarat Sistem (Prerequisites)
-1. **Python 3.8+** dan **MySQL Server** (XAMPP / MySQL Community Server).
+1. **Python 3.8+** (modul `sqlite3` sudah termasuk bawaan Python, tanpa instalasi tambahan).
 2. **Flutter SDK (v3.19.x atau terbaru)** & **Dart SDK**.
 3. Android Studio / VS Code dengan ekstensi Flutter & Dart.
 
 ---
 
-### Langkah 1: Pengaturan Backend Server (Flask + MySQL)
+### Langkah 1: Pengaturan Backend Server (Flask + SQLite)
 
-1. **Jalankan MySQL Server** melalui XAMPP Control Panel atau layanan MySQL Service.
-2. Navigasi ke direktori server:
+1. Navigasi ke direktori server:
    ```bash
    cd c:\Users\LENOVO\Documents\SERKOM\server_toko
    ```
@@ -299,7 +296,7 @@ aplikasi_toko_elektronik/
      ```bash
      python app.py
      ```
-   *Server akan otomatis membuat basis data `toko_elektronik_db`, membuat tabel-tabel pendukung, serta mengisikan data awal (Admin & Produk Sample) saat pertama kali dijalankan di port `5000`.*
+   *Server akan otomatis membuat file basis data `toko_elektronik.db`, membuat tabel-tabel pendukung, serta mengisikan data awal (Admin & Produk Sample) saat pertama kali dijalankan di port `5000`.*
 
 ---
 
@@ -333,4 +330,4 @@ aplikasi_toko_elektronik/
 ## 9. Catatan Arsitektur & Optimasi UX
 
 1. **Bebas Rendering Overflow**: Seluruh elemen antarmuka (terutama `ProductCard` pada daftar produk grid dan header alamat pada `CheckoutPage`) telah disesuaikan rasio aspeknya (`childAspectRatio: 0.65`) dan menggunakan `Wrap`/`Flexible` agar tampil konsisten tanpa garis error kuning-hitam di layar resolusi tinggi maupun rendah.
-2. **Keamanan & Sinkronisasi Stok**: Pengurangan stok produk dilakukan secara atomic di tingkat basis data MySQL ketika Admin menyetujui transaksi atau saat transaksi ditandai `Selesai`, menjaga konsistensi persediaan barang.
+2. **Keamanan & Sinkronisasi Stok**: Pengurangan stok produk dilakukan secara atomic di tingkat basis data SQLite ketika Admin menyetujui transaksi atau saat transaksi ditandai `Selesai`, menjaga konsistensi persediaan barang.

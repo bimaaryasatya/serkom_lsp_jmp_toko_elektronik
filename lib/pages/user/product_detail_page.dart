@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
@@ -8,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../repositories/review_repository.dart';
+import '../../widgets/product_image.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final ProductModel product;
@@ -86,22 +86,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            ProductImage(
+              imageUrl: product.image,
               width: double.infinity,
               height: 300,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF1C2333)
-                  : const Color(0xFFF1F5F9),
-              child: CachedNetworkImage(
-                imageUrl: product.image,
-                fit: BoxFit.contain,
-                placeholder: (_, __) => Center(
-                  child: CircularProgressIndicator(color: cs.primary),
-                ),
-                errorWidget: (_, __, ___) => Center(
-                  child: Icon(Icons.image_not_supported, size: 64, color: cs.onSurfaceVariant),
-                ),
-              ),
+              fit: BoxFit.contain,
             ),
             Padding(
               padding: const EdgeInsets.all(16),

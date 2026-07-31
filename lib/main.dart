@@ -1,8 +1,6 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'database/db_factory.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'models/product_model.dart';
@@ -28,10 +26,7 @@ import 'pages/admin/admin_report_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+  initDatabaseFactory();
   runApp(const MyApp());
 }
 

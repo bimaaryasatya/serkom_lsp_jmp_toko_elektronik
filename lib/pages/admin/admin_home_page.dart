@@ -1,12 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../core/constants/constants.dart';
 import '../../core/routes/app_routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../repositories/product_repository.dart';
+import '../../repositories/transaction_repository.dart';
+import '../../repositories/user_repository.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -27,27 +27,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 
   Future<void> _loadData() async {
-    int productCount = 0;
-    int userCount = 0;
-    double totalRevenue = 0;
-
-    try {
-      final pRes = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/products/count'));
-      if (pRes.statusCode == 200) {
-        productCount = json.decode(pRes.body)['count'] ?? 0;
-      }
-
-      final uRes = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/users/count'));
-      if (uRes.statusCode == 200) {
-        userCount = json.decode(uRes.body)['count'] ?? 0;
-      }
-
-      final rRes = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/stats/revenue'));
-      if (rRes.statusCode == 200) {
-        final data = json.decode(rRes.body);
-        totalRevenue = (data['totalRevenue'] as num).toDouble();
-      }
-    } catch (_) {}
+    final productCount = await ProductRepository().getProductCount();
+    final userCount = await UserRepository().getUserCount();
+    final totalRevenue = await TransactionRepository().getTotalRevenue();
 
     if (!mounted) return;
     setState(() {

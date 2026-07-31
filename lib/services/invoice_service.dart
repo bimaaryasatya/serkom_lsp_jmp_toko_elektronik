@@ -1,14 +1,14 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/transaction_item_model.dart';
 import '../models/transaction_model.dart';
+import 'invoice_local_storage_stub.dart'
+    if (dart.library.io) 'invoice_local_storage_io.dart' as invoice_local_storage;
 
 class InvoiceService {
   static String formatRupiah(num amount) {
@@ -328,27 +328,13 @@ class InvoiceService {
     required List<TransactionItemModel> items,
     String? customerName,
     String? customerEmail,
-  }) async {
-    final bytes = await buildPdf(
+  }) {
+    return invoice_local_storage.InvoiceLocalStorage.saveToLocalStorage(
       transaction: transaction,
       items: items,
       customerName: customerName,
       customerEmail: customerEmail,
     );
-
-    Directory? dir;
-    try {
-      dir = await getApplicationDocumentsDirectory();
-    } catch (_) {
-      dir = null;
-    }
-    if (dir == null) {
-      throw Exception('Penyimpanan lokal tidak tersedia di perangkat ini');
-    }
-
-    final file = File('${dir.path}${Platform.pathSeparator}${buildFileName(transaction)}');
-    await file.writeAsBytes(bytes, flush: true);
-    return file.path;
   }
 
   static bool get isWeb => kIsWeb;

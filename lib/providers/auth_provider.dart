@@ -20,34 +20,32 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> checkLoginStatus() async {
     try {
-      // 1. Coba muat sesi user dari SQLite lokal dulu (mendukung mode offline)
+      // Muat sesi user dari SQLite lokal (mode offline penuh tanpa server)
       UserModel? cachedUser = await _sqliteHelper.getCachedUser();
       if (cachedUser != null) {
         _user = cachedUser;
         notifyListeners();
       }
-
-      // 2. Verifikasi/perbarui dari server/MySQL jika online
-      final prefs = await SharedPreferences.getInstance();
-      int? userId = prefs.getInt('userId') ?? cachedUser?.id;
-      if (userId != null) {
-        try {
-          var remoteUser = await _userRepository.getUserById(userId);
-          if (remoteUser != null) {
-            _user = remoteUser;
-            await _sqliteHelper.saveSession(
-              userId: remoteUser.id!,
-              token: 'token_${remoteUser.id}_${DateTime.now().millisecondsSinceEpoch}',
-              name: remoteUser.name,
-              email: remoteUser.email,
-              role: remoteUser.role,
-            );
-            notifyListeners();
-          }
-        } catch (_) {}
-      }
     } catch (e) {
       // silent fail on startup
+    }
+  }
+
+  Future<void> refreshUser() async {
+    final current = _user;
+    if (current?.id == null) return;
+
+    final fresh = await _userRepository.getUserById(current!.id!);
+    if (fresh != null) {
+      _user = fresh;
+      await _sqliteHelper.saveSession(
+        userId: fresh.id!,
+        token: 'token_${fresh.id}_${DateTime.now().millisecondsSinceEpoch}',
+        name: fresh.name,
+        email: fresh.email,
+        role: fresh.role,
+      );
+      notifyListeners();
     }
   }
 
@@ -57,6 +55,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final db = await _sqliteHelper.database;
+      if (db == null) {
+        final detail = SqliteHelper.lastOpenError;
+        _error = detail != null && detail.isNotEmpty
+            ? 'Gagal membuka database lokal: $detail'
+            : 'Gagal membuka database lokal. Hapus file tiptronic_local.db lalu jalankan ulang.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       var user = await _userRepository.login(email, password);
       if (user != null) {
         _user = user;

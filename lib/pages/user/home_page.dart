@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/utils/network_checker.dart';
 import '../../models/banner_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -12,6 +10,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../repositories/banner_repository.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/product_image.dart';
 import '../../widgets/loading_widget.dart';
 
 class UserHomePage extends StatefulWidget {
@@ -45,7 +44,6 @@ class _UserHomePageState extends State<UserHomePage> {
         context.read<WishlistProvider>().loadWishlist(user!.id!);
       }
       _loadBanners();
-      _checkNetworkConnection();
     });
   }
 
@@ -57,13 +55,6 @@ class _UserHomePageState extends State<UserHomePage> {
     _minPriceController.dispose();
     _maxPriceController.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkNetworkConnection() async {
-    bool isReachable = await NetworkChecker.isServerReachable();
-    if (!isReachable && mounted) {
-      NetworkChecker.showOfflineSnackBar(context);
-    }
   }
 
   Future<void> _loadBanners() async {
@@ -417,15 +408,12 @@ class _UserHomePageState extends State<UserHomePage> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  ClipRRect(
+                                  ProductImage(
+                                    imageUrl: b.image,
+                                    width: 70,
+                                    height: 70,
+                                    fit: BoxFit.cover,
                                     borderRadius: BorderRadius.circular(10),
-                                    child: CachedNetworkImage(
-                                      imageUrl: b.image,
-                                      width: 70,
-                                      height: 70,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => Icon(Icons.devices, size: 40, color: cs.primary),
-                                    ),
                                   ),
                                 ],
                               ),

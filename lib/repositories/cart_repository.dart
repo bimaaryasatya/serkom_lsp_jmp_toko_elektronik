@@ -1,55 +1,27 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../core/constants/constants.dart';
+import '../database/sqlite_helper.dart';
 import '../models/cart_model.dart';
 
 class CartRepository {
+  final SqliteHelper _sqliteHelper = SqliteHelper();
+
   Future<void> addToCart(int productId, int quantity) async {
-    try {
-      await http.post(
-        Uri.parse('${AppConstants.apiBaseUrl}/cart'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'productId': productId,
-          'quantity': quantity,
-        }),
-      );
-    } catch (_) {}
+    await _sqliteHelper.addToCart(productId, quantity);
   }
 
   Future<List<CartModel>> getCartItems() async {
-    try {
-      final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/cart'));
-      if (response.statusCode == 200) {
-        final List<dynamic> list = json.decode(response.body);
-        return list.map((e) => CartModel.fromMap(Map<String, dynamic>.from(e))).toList();
-      }
-      return [];
-    } catch (_) {
-      return [];
-    }
+    return _sqliteHelper.getCartItems();
   }
 
   Future<void> updateQuantity(int id, int quantity) async {
-    try {
-      await http.put(
-        Uri.parse('${AppConstants.apiBaseUrl}/cart/$id'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'quantity': quantity}),
-      );
-    } catch (_) {}
+    await _sqliteHelper.updateCartQuantity(id, quantity);
   }
 
   Future<void> removeFromCart(int id) async {
-    try {
-      await http.delete(Uri.parse('${AppConstants.apiBaseUrl}/cart/$id'));
-    } catch (_) {}
+    await _sqliteHelper.removeCartItem(id);
   }
 
   Future<void> clearCart() async {
-    try {
-      await http.delete(Uri.parse('${AppConstants.apiBaseUrl}/cart'));
-    } catch (_) {}
+    await _sqliteHelper.clearCart();
   }
 
   Future<int> getCartItemCount() async {

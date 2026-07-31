@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import '../../core/constants/constants.dart';
 import '../../core/routes/app_routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../repositories/user_repository.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -48,20 +46,22 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
             ElevatedButton(
               onPressed: () async {
-                try {
-                  final response = await http.put(
-                    Uri.parse('${AppConstants.apiBaseUrl}/users/${user.id}'),
-                    headers: {'Content-Type': 'application/json'},
-                    body: json.encode({'name': nameController.text.trim(), 'email': emailController.text.trim()}),
+                final ok = await UserRepository().updateProfile(
+                  user.id!,
+                  nameController.text.trim(),
+                  emailController.text.trim(),
+                );
+                if (ok && mounted) {
+                  await auth.refreshUser();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profil berhasil diperbarui')),
                   );
-                  if (response.statusCode == 200 && mounted) {
-                    auth.login(emailController.text.trim(), user.password);
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profil berhasil diperbarui')),
-                    );
-                  }
-                } catch (_) {}
+                } else if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Gagal memperbarui profil')),
+                  );
+                }
               },
               child: const Text('Simpan'),
             ),
@@ -105,27 +105,24 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
             ElevatedButton(
               onPressed: () async {
-                try {
-                  final response = await http.put(
-                    Uri.parse('${AppConstants.apiBaseUrl}/users/${user.id}/password'),
-                    headers: {'Content-Type': 'application/json'},
-                    body: json.encode({
-                      'oldPassword': oldPwController.text,
-                      'newPassword': newPwController.text,
-                    }),
+                final ok = await UserRepository().changePassword(
+                  user.id!,
+                  oldPwController.text,
+                  newPwController.text,
+                );
+                if (ok && mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Password berhasil diubah')),
                   );
-                  final data = json.decode(response.body);
-                  if (data['success'] == true && mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password berhasil diubah')),
-                    );
-                  } else if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(data['message'] ?? 'Gagal ubah password'), backgroundColor: cs.error),
-                    );
-                  }
-                } catch (_) {}
+                } else if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Password lama salah atau gagal diubah'),
+                      backgroundColor: cs.error,
+                    ),
+                  );
+                }
               },
               child: const Text('Simpan Password'),
             ),

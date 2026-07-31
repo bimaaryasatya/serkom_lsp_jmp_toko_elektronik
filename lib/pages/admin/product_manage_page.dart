@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
 import '../../providers/product_provider.dart';
+import '../../widgets/product_image.dart';
 
 class ProductManagePage extends StatefulWidget {
   const ProductManagePage({super.key});
@@ -208,21 +208,12 @@ class _ProductManagePageState extends State<ProductManagePage> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: ClipRRect(
+                  leading: ProductImage(
+                    imageUrl: product.image,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: CachedNetworkImage(
-                        imageUrl: product.image,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) =>
-                            const CircularProgressIndicator(
-                                strokeWidth: 2),
-                        errorWidget: (_, __, ___) =>
-                            const Icon(Icons.image_not_supported),
-                      ),
-                    ),
                   ),
                   title: Text(
                     product.name,

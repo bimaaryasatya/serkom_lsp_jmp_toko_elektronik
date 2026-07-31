@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import '../../core/constants/constants.dart';
+import '../../repositories/transaction_repository.dart';
 
 class AdminReportPage extends StatefulWidget {
   const AdminReportPage({super.key});
@@ -24,19 +22,13 @@ class _AdminReportPageState extends State<AdminReportPage> {
 
   Future<void> _loadReport() async {
     setState(() => _isLoading = true);
-    try {
-      final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/stats/sales-report'));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          _summary = data['summary'] ?? {};
-          _orders = data['orders'] ?? [];
-          _isLoading = false;
-        });
-        return;
-      }
-    } catch (_) {}
-    setState(() => _isLoading = false);
+    final data = await TransactionRepository().getSalesReport();
+    if (!mounted) return;
+    setState(() {
+      _summary = data['summary'] as Map<String, dynamic>? ?? {};
+      _orders = data['orders'] as List<dynamic>? ?? [];
+      _isLoading = false;
+    });
   }
 
   @override

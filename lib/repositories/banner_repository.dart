@@ -1,19 +1,10 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../core/constants/constants.dart';
+import '../database/sqlite_helper.dart';
 import '../models/banner_model.dart';
 
 class BannerRepository {
+  final SqliteHelper _sqliteHelper = SqliteHelper();
+
   Future<List<BannerModel>> getBanners() async {
-    try {
-      final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/banners'));
-      if (response.statusCode == 200) {
-        final List<dynamic> list = json.decode(response.body);
-        return list.map((e) => BannerModel.fromMap(Map<String, dynamic>.from(e))).toList();
-      }
-      return [];
-    } catch (_) {
-      return [];
-    }
+    return _sqliteHelper.getBanners();
   }
 }
