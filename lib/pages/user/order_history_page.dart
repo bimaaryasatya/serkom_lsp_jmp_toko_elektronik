@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +13,7 @@ import '../../providers/product_provider.dart';
 import '../../repositories/product_repository.dart';
 import '../../repositories/review_repository.dart';
 import '../../repositories/transaction_repository.dart';
+import '../../services/invoice_service.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({super.key});
@@ -166,6 +168,137 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           },
         );
       },
+    );
+  }
+
+  void _showInvoiceOptions(TransactionModel transaction, List<TransactionItemModel> items) {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: cs.outline, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(Icons.receipt_long, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        transaction.invoice,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: cs.onSurface),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Transaksi berstatus Selesai. Simpan atau unduh invoice sebagai PDF.',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  tileColor: cs.primary.withValues(alpha: 0.08),
+                  leading: Icon(Icons.download_outlined, color: cs.primary),
+                  title: const Text('Download Invoice', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Pilih lokasi penyimpanan di perangkat'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _saveInvoice(transaction, items, viaDialog: true);
+                  },
+                ),
+                const SizedBox(height: 8),
+                if (!InvoiceService.isWeb)
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    tileColor: cs.tertiary.withValues(alpha: 0.08),
+                    leading: Icon(Icons.folder_outlined, color: cs.tertiary),
+                    title: const Text('Simpan ke Penyimpanan Lokal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text('Tersimpan di folder dokumen aplikasi'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _saveInvoice(transaction, items, viaDialog: false);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveInvoice(
+    TransactionModel transaction,
+    List<TransactionItemModel> items, {
+    required bool viaDialog,
+  }) async {
+    final user = context.read<AuthProvider>().user;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3)),
+            SizedBox(width: 16),
+            Flexible(child: Text('Menyiapkan invoice...')),
+          ],
+        ),
+      ),
+    );
+
+    String? message;
+    try {
+      if (viaDialog) {
+        final path = await InvoiceService.downloadViaDialog(
+          transaction: transaction,
+          items: items,
+          customerName: user?.name,
+          customerEmail: user?.email,
+        );
+        if (kIsWeb) {
+          message = 'Invoice ${transaction.invoice}.pdf berhasil diunduh di browser';
+        } else {
+          message = path == null ? 'Penyimpanan dibatalkan' : 'Invoice tersimpan di:\n$path';
+        }
+      } else {
+        final path = await InvoiceService.saveToLocalStorage(
+          transaction: transaction,
+          items: items,
+          customerName: user?.name,
+          customerEmail: user?.email,
+        );
+        message = 'Invoice tersimpan di penyimpanan lokal:\n$path';
+      }
+    } catch (e) {
+      message = 'Gagal menyimpan invoice: $e';
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -351,6 +484,23 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                 ),
                               ],
                             ),
+
+                            if (isCompleted) ...[
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _showInvoiceOptions(t, items),
+                                  icon: const Icon(Icons.download_outlined, size: 16),
+                                  label: const Text('Simpan / Download Invoice (PDF)'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    side: BorderSide(color: cs.primary),
+                                    foregroundColor: cs.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       );
