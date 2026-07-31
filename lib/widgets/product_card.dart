@@ -60,7 +60,7 @@ class ProductCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
                   child: Container(
-                    height: 140,
+                    height: 125,
                     width: double.infinity,
                     color: isDark ? const Color(0xFF1C2333) : const Color(0xFFF8FAFC),
                     child: CachedNetworkImage(
@@ -136,7 +136,7 @@ class ProductCard extends StatelessWidget {
             // Product Info
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -150,7 +150,7 @@ class ProductCard extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
                             color: cs.onSurface,
-                            height: 1.2,
+                            height: 1.15,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,

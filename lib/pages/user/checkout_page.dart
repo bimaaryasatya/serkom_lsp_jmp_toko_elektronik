@@ -185,18 +185,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.location_on_outlined, color: cs.primary),
                               const SizedBox(width: 8),
                               Text('Alamat Pengiriman', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: cs.onSurface)),
                             ],
                           ),
-                          Wrap(
-                            spacing: 6,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               OutlinedButton.icon(
                                 onPressed: _openMapPicker,
@@ -204,12 +208,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 label: Text('Peta', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: cs.primary)),
                                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6)),
                               ),
+                              const SizedBox(width: 6),
                               ElevatedButton.icon(
                                 onPressed: _isLocating ? null : _detectGpsLocation,
                                 icon: _isLocating
                                     ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                     : const Icon(Icons.my_location, size: 14),
-                                label: Text(_isLocating ? 'GPS...' : 'GPS Saya'),
+                                label: Text(_isLocating ? 'GPS...' : 'GPS Saya', style: const TextStyle(fontSize: 11)),
                                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6)),
                               ),
                             ],
@@ -322,7 +327,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Ongkos Kirim ($_selectedCourier)', style: TextStyle(color: cs.onSurfaceVariant)),
+                          Expanded(
+                            child: Text(
+                              'Ongkos Kirim ($_selectedCourier)',
+                              style: TextStyle(color: cs.onSurfaceVariant),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             currencyFormat.format(_shippingFee),
                             style: TextStyle(fontWeight: FontWeight.bold, color: cs.tertiary),
