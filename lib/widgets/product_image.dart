@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class ProductImage extends StatelessWidget {
@@ -53,6 +55,14 @@ class ProductImage extends StatelessWidget {
     } else if (trimmedUrl.startsWith('assets/')) {
       child = Image.asset(
         trimmedUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
+      );
+    } else if (!kIsWeb && File(trimmedUrl).existsSync()) {
+      child = Image.file(
+        File(trimmedUrl),
         width: width,
         height: height,
         fit: fit,

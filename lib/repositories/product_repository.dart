@@ -43,16 +43,23 @@ class ProductRepository {
                 if (price < 10000) {
                   price = (price * 15000).roundToDouble();
                 }
+                List<String> imgList = [];
+                if (item['images'] is List) {
+                  imgList = (item['images'] as List).map((e) => e.toString()).toList();
+                }
+                final thumb = item['thumbnail']?.toString() ?? (imgList.isNotEmpty ? imgList.first : '');
+                if (thumb.isNotEmpty && !imgList.contains(thumb)) {
+                  imgList.insert(0, thumb);
+                }
+
                 final product = ProductModel(
                   id: item['id'] as int,
                   name: item['title']?.toString() ?? '',
                   description: item['description']?.toString() ?? '',
                   price: price,
                   stock: (item['stock'] is int) ? item['stock'] as int : 10,
-                  image: item['thumbnail']?.toString() ??
-                      (item['images'] is List && (item['images'] as List).isNotEmpty
-                          ? item['images'][0].toString()
-                          : ''),
+                  image: thumb,
+                  images: imgList,
                   category: item['category']?.toString() ?? cat,
                 );
                 await _sqliteHelper.insertProduct(product);

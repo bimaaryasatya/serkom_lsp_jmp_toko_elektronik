@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as path_helper;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
 import '../../providers/product_provider.dart';
@@ -23,102 +27,258 @@ class _ProductManagePageState extends State<ProductManagePage> {
 
   void _showAddEditDialog({ProductModel? product}) {
     final nameController = TextEditingController(text: product?.name ?? '');
-    final descController =
-        TextEditingController(text: product?.description ?? '');
-    final priceController =
-        TextEditingController(text: product?.price.toString() ?? '');
-    final stockController =
-        TextEditingController(text: product?.stock.toString() ?? '');
-    final imageController = TextEditingController(text: product?.image ?? '');
-    final categoryController =
-        TextEditingController(text: product?.category ?? '');
+    final descController = TextEditingController(text: product?.description ?? '');
+    final priceController = TextEditingController(text: product?.price.toString() ?? '');
+    final stockController = TextEditingController(text: product?.stock.toString() ?? '');
+    final urlInputController = TextEditingController();
+    final categoryController = TextEditingController(text: product?.category ?? '');
     final formKey = GlobalKey<FormState>();
+
+    final List<String> currentImages = List<String>.from(product?.imageList ?? []);
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(product == null ? 'Tambah Produk' : 'Edit Produk'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nama Produk'),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Wajib diisi' : null,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: descController,
-                  decoration:
-                      const InputDecoration(labelText: 'Deskripsi'),
-                  maxLines: 3,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Wajib diisi' : null,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: priceController,
-                  decoration: const InputDecoration(labelText: 'Harga'),
-                  keyboardType: TextInputType.number,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Wajib diisi' : null,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: stockController,
-                  decoration: const InputDecoration(labelText: 'Stok'),
-                  keyboardType: TextInputType.number,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Wajib diisi' : null,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: imageController,
-                  decoration: const InputDecoration(labelText: 'URL Gambar'),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: categoryController,
-                  decoration:
-                      const InputDecoration(labelText: 'Kategori'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
-              final newProduct = ProductModel(
-                id: product?.id ?? DateTime.now().millisecondsSinceEpoch,
-                name: nameController.text,
-                description: descController.text,
-                price: double.parse(priceController.text),
-                stock: int.parse(stockController.text),
-                image: imageController.text,
-                category: categoryController.text,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> pickImageFiles() async {
+            try {
+              final result = await FilePicker.pickFiles(
+                type: FileType.image,
+                allowMultiple: true,
               );
 
-              if (product == null) {
-                context.read<ProductProvider>().addProduct(newProduct);
-              } else {
-                context.read<ProductProvider>().updateProduct(newProduct);
+              if (result != null && result.files.isNotEmpty) {
+                final appDir = await getApplicationDocumentsDirectory();
+                for (var file in result.files) {
+                  if (file.path != null && file.path!.isNotEmpty) {
+                    final originalFile = File(file.path!);
+                    if (await originalFile.exists()) {
+                      final fileName =
+                          'img_${DateTime.now().millisecondsSinceEpoch}_${path_helper.basename(file.path!)}';
+                      final savedFile = await originalFile.copy(path_helper.join(appDir.path, fileName));
+                      setDialogState(() {
+                        currentImages.add(savedFile.path);
+                      });
+                    }
+                  }
+                }
               }
+            } catch (e) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(content: Text('Gagal memilih file: $e'), backgroundColor: Colors.red),
+                );
+              }
+            }
+          }
 
-              Navigator.pop(ctx);
-            },
-            child: Text(product == null ? 'Tambah' : 'Simpan'),
-          ),
-        ],
+          void addUrlImage() {
+            final url = urlInputController.text.trim();
+            if (url.isNotEmpty) {
+              setDialogState(() {
+                currentImages.add(url);
+                urlInputController.clear();
+              });
+            }
+          }
+
+          return AlertDialog(
+            title: Text(product == null ? 'Tambah Produk' : 'Edit Produk'),
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(labelText: 'Nama Produk'),
+                        validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: descController,
+                        decoration: const InputDecoration(labelText: 'Deskripsi'),
+                        maxLines: 3,
+                        validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: priceController,
+                        decoration: const InputDecoration(labelText: 'Harga (Rp)'),
+                        keyboardType: TextInputType.number,
+                        validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: stockController,
+                        decoration: const InputDecoration(labelText: 'Stok'),
+                        keyboardType: TextInputType.number,
+                        validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: categoryController,
+                        decoration: const InputDecoration(labelText: 'Kategori (contoh: laptops, smartphones)'),
+                        validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Foto Produk (${currentImages.length})',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      // Image Preview List
+                      if (currentImages.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Belum ada gambar ditambahkan',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: 80,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: currentImages.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              return Stack(
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: ProductImage(
+                                        imageUrl: currentImages[index],
+                                        width: 76,
+                                        height: 76,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 2,
+                                    right: 2,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setDialogState(() {
+                                          currentImages.removeAt(index);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      // Buttons to add image (Upload File & URL)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: pickImageFiles,
+                              icon: const Icon(Icons.add_photo_alternate, size: 18),
+                              label: const Text('Pilih File Gambar'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: urlInputController,
+                              decoration: const InputDecoration(
+                                labelText: 'Tambah URL Gambar Eksternal',
+                                hintText: 'https://...',
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: addUrlImage,
+                            child: const Text('Tambah'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (!formKey.currentState!.validate()) return;
+                  if (urlInputController.text.trim().isNotEmpty) {
+                    currentImages.add(urlInputController.text.trim());
+                  }
+
+                  final primaryImage = currentImages.isNotEmpty ? currentImages.first : '';
+
+                  final newProduct = ProductModel(
+                    id: product?.id ?? DateTime.now().millisecondsSinceEpoch,
+                    name: nameController.text.trim(),
+                    description: descController.text.trim(),
+                    price: double.parse(priceController.text.trim()),
+                    stock: int.parse(stockController.text.trim()),
+                    image: primaryImage,
+                    images: currentImages,
+                    category: categoryController.text.trim(),
+                  );
+
+                  if (product == null) {
+                    context.read<ProductProvider>().addProduct(newProduct);
+                  } else {
+                    context.read<ProductProvider>().updateProduct(newProduct);
+                  }
+
+                  Navigator.pop(ctx);
+                },
+                child: Text(product == null ? 'Tambah' : 'Simpan'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

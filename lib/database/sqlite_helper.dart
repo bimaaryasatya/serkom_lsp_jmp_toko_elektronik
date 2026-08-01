@@ -119,13 +119,21 @@ class SqliteHelper {
     return databaseFactory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onCreate: (db, version) async {
           await _createAllTables(db);
           await _seedProductsIfEmpty(db);
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           await _createAllTables(db);
+          if (oldVersion < 3) {
+            try {
+              await db.execute('ALTER TABLE products ADD COLUMN images TEXT');
+            } catch (_) {}
+            try {
+              await db.execute('ALTER TABLE products_cache ADD COLUMN images TEXT');
+            } catch (_) {}
+          }
           await _seedProductsIfEmpty(db);
         },
       ),
@@ -155,6 +163,7 @@ class SqliteHelper {
         price REAL NOT NULL,
         stock INTEGER NOT NULL,
         image TEXT,
+        images TEXT,
         category TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       )
@@ -168,6 +177,7 @@ class SqliteHelper {
         price REAL NOT NULL,
         stock INTEGER NOT NULL,
         image TEXT,
+        images TEXT,
         category TEXT NOT NULL
       )
     ''');
@@ -346,6 +356,12 @@ class SqliteHelper {
         price: 24999000,
         stock: 10,
         image: 'https://cdn.dummyjson.com/product-images/laptops/apple-macbook-pro-14-inch-space-grey/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/laptops/apple-macbook-pro-14-inch-space-grey/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/laptops/apple-macbook-pro-14-inch-space-grey/1.webp',
+          'https://cdn.dummyjson.com/product-images/laptops/apple-macbook-pro-14-inch-space-grey/2.webp',
+          'https://cdn.dummyjson.com/product-images/laptops/apple-macbook-pro-14-inch-space-grey/3.webp',
+        ],
         category: 'laptops',
       ),
       ProductModel(
@@ -355,6 +371,12 @@ class SqliteHelper {
         price: 18999000,
         stock: 15,
         image: 'https://cdn.dummyjson.com/product-images/smartphones/iphone-13-pro/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/smartphones/iphone-13-pro/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/smartphones/iphone-13-pro/1.webp',
+          'https://cdn.dummyjson.com/product-images/smartphones/iphone-13-pro/2.webp',
+          'https://cdn.dummyjson.com/product-images/smartphones/iphone-13-pro/3.webp',
+        ],
         category: 'smartphones',
       ),
       ProductModel(
@@ -364,6 +386,11 @@ class SqliteHelper {
         price: 12500000,
         stock: 12,
         image: 'https://cdn.dummyjson.com/product-images/smartphones/samsung-galaxy-s10/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/smartphones/samsung-galaxy-s10/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/smartphones/samsung-galaxy-s10/1.webp',
+          'https://cdn.dummyjson.com/product-images/smartphones/samsung-galaxy-s10/2.webp',
+        ],
         category: 'smartphones',
       ),
       ProductModel(
@@ -373,6 +400,10 @@ class SqliteHelper {
         price: 4999000,
         stock: 20,
         image: 'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods/1.webp',
+        ],
         category: 'audio',
       ),
       ProductModel(
@@ -382,6 +413,10 @@ class SqliteHelper {
         price: 1999000,
         stock: 25,
         image: 'https://cdn.dummyjson.com/product-images/mobile-accessories/amazon-echo-plus/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/amazon-echo-plus/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/amazon-echo-plus/1.webp',
+        ],
         category: 'audio',
       ),
       ProductModel(
@@ -391,6 +426,11 @@ class SqliteHelper {
         price: 12999000,
         stock: 8,
         image: 'https://cdn.dummyjson.com/product-images/tablets/ipad-mini-2021-starlight/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/tablets/ipad-mini-2021-starlight/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/tablets/ipad-mini-2021-starlight/1.webp',
+          'https://cdn.dummyjson.com/product-images/tablets/ipad-mini-2021-starlight/2.webp',
+        ],
         category: 'tablets',
       ),
       ProductModel(
@@ -400,6 +440,10 @@ class SqliteHelper {
         price: 5499000,
         stock: 30,
         image: 'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-watch-series-4-gold/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-watch-series-4-gold/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-watch-series-4-gold/1.webp',
+        ],
         category: 'accessories',
       ),
       ProductModel(
@@ -409,6 +453,10 @@ class SqliteHelper {
         price: 14999000,
         stock: 9,
         image: 'https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-s8-plus-grey/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-s8-plus-grey/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-s8-plus-grey/1.webp',
+        ],
         category: 'tablets',
       ),
       ProductModel(
@@ -418,6 +466,10 @@ class SqliteHelper {
         price: 22999000,
         stock: 6,
         image: 'https://cdn.dummyjson.com/product-images/laptops/asus-zenbook-pro-dual-screen-laptop/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/laptops/asus-zenbook-pro-dual-screen-laptop/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/laptops/asus-zenbook-pro-dual-screen-laptop/1.webp',
+        ],
         category: 'laptops',
       ),
       ProductModel(
@@ -427,6 +479,10 @@ class SqliteHelper {
         price: 8499000,
         stock: 14,
         image: 'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods-max-silver/thumbnail.webp',
+        images: [
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods-max-silver/thumbnail.webp',
+          'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods-max-silver/1.webp',
+        ],
         category: 'audio',
       ),
     ];

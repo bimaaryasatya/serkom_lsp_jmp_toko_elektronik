@@ -21,6 +21,8 @@ class ProductDetailPage extends StatefulWidget {
 class _ProductDetailPageState extends State<ProductDetailPage> {
   final _reviewRepo = ReviewRepository();
   int _quantity = 1;
+  int _currentImageIndex = 0;
+  late PageController _pageController;
 
   List<ReviewModel> _reviews = [];
   double _avgRating = 0.0;
@@ -30,7 +32,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _loadReviews();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadReviews() async {
@@ -86,12 +95,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ProductImage(
-              imageUrl: product.image,
-              width: double.infinity,
-              height: 300,
-              fit: BoxFit.contain,
-            ),
+            _buildImageSlider(product.imageList, cs),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -304,6 +308,230 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildImageSlider(List<String> images, ColorScheme cs) {
+    if (images.isEmpty) {
+      return const ProductImage(
+        imageUrl: '',
+        width: double.infinity,
+        height: 300,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Column(
+      children: [
+        Stack(
+          children: [
+            SizedBox(
+              height: 300,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: images.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentImageIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () => _openImagePreview(context, images, index),
+                    child: Hero(
+                      tag: 'product_img_${widget.product.id}_$index',
+                      child: ProductImage(
+                        imageUrl: images[index],
+                        width: double.infinity,
+                        height: 300,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (images.length > 1) ...[
+              // Left Arrow Button
+              Positioned(
+                left: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: IconButton(
+                      icon: const Icon(Icons.chevron_left, color: Colors.white, size: 28),
+                      onPressed: _currentImageIndex > 0
+                          ? () {
+                              _pageController.previousPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+              // Right Arrow Button
+              Positioned(
+                right: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: IconButton(
+                      icon: const Icon(Icons.chevron_right, color: Colors.white, size: 28),
+                      onPressed: _currentImageIndex < images.length - 1
+                          ? () {
+                              _pageController.nextPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+              // Page Counter Badge
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    '${_currentImageIndex + 1} / ${images.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (images.length > 1) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 60,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: images.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final isSelected = _currentImageIndex == index;
+                return GestureDetector(
+                  onTap: () {
+                    _pageController.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? cs.primary : Colors.grey.withValues(alpha: 0.3),
+                        width: isSelected ? 2.5 : 1,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: ProductImage(
+                        imageUrl: images[index],
+                        width: 54,
+                        height: 54,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _openImagePreview(BuildContext context, List<String> images, int initialIndex) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        int pageIdx = initialIndex;
+        final previewController = PageController(initialPage: initialIndex);
+        return StatefulBuilder(
+          builder: (ctx, setPreviewState) {
+            return Dialog.fullscreen(
+              backgroundColor: Colors.black,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    controller: previewController,
+                    itemCount: images.length,
+                    onPageChanged: (idx) {
+                      setPreviewState(() => pageIdx = idx);
+                    },
+                    itemBuilder: (ctx, idx) {
+                      return InteractiveViewer(
+                        maxScale: 4.0,
+                        child: Center(
+                          child: ProductImage(
+                            imageUrl: images[idx],
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                      onPressed: () => Navigator.pop(dialogCtx),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 24,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${pageIdx + 1} / ${images.length}',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
